@@ -7,13 +7,57 @@ GREEN='\E[1;32m'
 RESET='\E[0m'
 
 echo -e "${BLUE}❯ ${CYAN}Building OpenResty ${YELLOW}${OPENRESTY_VERSION} with nginx_http_geoip2 module...${RESET}"
+apt-get update
+apt-get install -y \
+    libtool \
+    autoconf \
+    automake \
+    autotools-dev \
+    build-essential \
+        gcc \
+        g++ \
+        make \
+        socat \
+        git \
+        libxml2 \
+        libxml2-dev \
+        libcurl4-openssl-dev \
+        libyajl-dev \
+        pkgconf \
+        liblua5.1-dev \
+        libpcre3-dev \
+        libgeoip-dev \
+        libssl-dev \
+#    && /tmp/install-lua \
+#    && /tmp/install-openresty \
+apt-get clean
+
 
 cd /tmp
 wget "https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz"
 tar -xzf openresty-${OPENRESTY_VERSION}.tar.gz
 mv /tmp/openresty-${OPENRESTY_VERSION} /tmp/openresty
+
 git clone https://github.com/leev/ngx_http_geoip2_module.git
 mv /tmp/ngx_http_geoip2_module /tmp/openresty/ngx_http_geoip2_module
+
+cd /tmp
+git clone --recursive https://github.com/owasp-modsecurity/ModSecurity ModSecurity
+cd ModSecurity
+git submodule init
+git submodule update
+
+./build.sh
+./configure
+make
+make install
+
+rm -rf /tmp/ModSecurity
+
+cd /tmp
+git clone https://github.com/owasp-modsecurity/ModSecurity-nginx
+
+
 cd /tmp/openresty
 
 ./configure \
@@ -55,7 +99,8 @@ cd /tmp/openresty
 	--with-stream_realip_module \
 	--with-stream_ssl_module \
 	--with-stream_ssl_preread_module \
-	--add-dynamic-module=/tmp/openresty/ngx_http_geoip2_module
+	--add-dynamic-module=/tmp/openresty/ngx_http_geoip2_module \
+        --add-dynamic-module=/tmp/ModSecurity-nginx
 
 make -j2
 
